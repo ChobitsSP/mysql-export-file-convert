@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.ComponentModel.DataAnnotations;
 
 namespace TruckCrm.Test
 {
@@ -34,19 +35,30 @@ namespace TruckCrm.Test
         static void ReplaceAllSet(string filePath, string dbname)
         {
             var encode = Encoding.UTF8;
-            var text = File.ReadAllText(filePath, encode);
-            var reg = new Regex(@"[\r\n]SET \@[^;]+;");
-            text = reg.Replace(text, m => string.Empty);
+            var lines = File.ReadAllLines(filePath, encode);
 
-            var reg2 = new Regex(@"Database: ([^\r\n]+)");
+            var removeIndex = new List<int>();
 
-            text = reg2.Replace(text, m =>
+            for (var i = 0; i < lines.Length; i++)
             {
-                if (m.Index == 0) return "Database: " + dbname;
-                return m.Value;
-            });
+                var str = lines[i];
+                if (Regex.IsMatch(str, @"^SET \@[^;]+;$"))
+                {
+                    lines[i] = string.Empty;
+                    continue;
+                }
+                if (i < 3)
+                {
+                    var reg = new Regex("Database: [A-Za-z0-9_]+$");
 
-            File.WriteAllText(filePath, text, encode);
+                    if (reg.IsMatch(str))
+                    {
+                        lines[i] = reg.Replace(str, m => "Database: " + dbname);
+                    }
+                }
+            }
+
+            File.WriteAllLines(filePath, lines, encode);
         }
     }
 }
