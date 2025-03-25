@@ -42,7 +42,8 @@ namespace TruckCrm.Test
             for (var i = 0; i < lines.Length; i++)
             {
                 var str = lines[i];
-                if (Regex.IsMatch(str, @"^SET \@[^;]+;$"))
+                // /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+                if (str.StartsWith("/*") && str.EndsWith("*/;") && Regex.IsMatch(str, @" SET \@[^;]+;$"))
                 {
                     lines[i] = string.Empty;
                     continue;
