@@ -8,6 +8,8 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.ComponentModel.DataAnnotations;
+using MySqlApp;
+using System.Xml.Linq;
 
 namespace TruckCrm.Test
 {
@@ -21,13 +23,19 @@ namespace TruckCrm.Test
                 var dir = Console.ReadLine();
 
                 Console.WriteLine("请输入数据库名称: ");
-                var dbname = Console.ReadLine();
+                var dbName = Console.ReadLine();
 
                 var files = Directory.GetFiles(dir);
 
-                foreach (var file in files)
+                foreach (var filePath in files)
                 {
-                    ReplaceAllSet(file, dbname);
+                    FileProcessor.ProcessFile(
+                        filePath,
+                        Encoding.UTF8,
+                        new SetBlockProcessor(),
+                        new DatabaseNameReplacer(dbName)
+                        );
+                    // ReplaceAllSet(file, dbname);
                 }
             }
         }
@@ -37,18 +45,39 @@ namespace TruckCrm.Test
             var encode = Encoding.UTF8;
             var lines = File.ReadAllLines(filePath, encode);
 
-            var removeIndex = new List<int>();
+            int? setIndex = null;
 
             for (var i = 0; i < lines.Length; i++)
             {
                 var str = lines[i];
-                // /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-                if (str.StartsWith("/*") && str.EndsWith("*/;") && Regex.IsMatch(str, @" SET \@[^;]+;$"))
+
+                if (setIndex.HasValue)
                 {
-                    lines[i] = string.Empty;
+                    if (str.EndsWith(";"))
+                    {
+                        for (var j = setIndex.Value; j <= i; j++)
+                        {
+                            lines[j] = string.Empty;
+                        }
+                        setIndex = null;
+                    }
                     continue;
                 }
-                if (i < 3)
+
+                if (str.StartsWith("SET @"))
+                {
+                    if (str.EndsWith(";"))
+                    {
+                        lines[i] = string.Empty;
+                        continue;
+                    }
+                    else
+                    {
+                        setIndex = i;
+                    }
+                }
+
+                if (i < 3 && str.StartsWith("--"))
                 {
                     var reg = new Regex("Database: [A-Za-z0-9_]+$");
 
