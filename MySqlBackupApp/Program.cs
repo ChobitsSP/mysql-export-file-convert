@@ -59,10 +59,12 @@ namespace MySqlBackupApp
 
         static void ExportSingleTable(MySqlBackup mb, string tableName, string dirPath)
         {
+            Console.WriteLine($"Exporting table {tableName}...");
             var dic = new Dictionary<string, string>();
             dic[tableName] = $"SELECT * FROM `{tableName}`";
             mb.ExportInfo.TablesToBeExportedDic = dic;
             mb.ExportToFile(Path.Combine(dirPath, tableName + ".sql"));
+            Console.WriteLine($"Table {tableName} exported.");
         }
     }
 }
