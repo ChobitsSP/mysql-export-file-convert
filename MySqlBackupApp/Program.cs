@@ -9,10 +9,19 @@ namespace MySqlBackupApp
     {
         static void Main(string[] args)
         {
-            var connectionString = ConfigUtils.GetConnectionString("Default");
-            connectionString = GetConnectionString(connectionString, (args != null && args.Length > 0) ? args[0] : null);
-            var savePath = ConfigUtils.GetSectionValue("DbBackup:SavePath");
-            StartBackup(connectionString, savePath);
+            LogService.Init();
+
+            try
+            {
+                var connectionString = ConfigUtils.GetConnectionString("Default");
+                connectionString = GetConnectionString(connectionString, (args != null && args.Length > 0) ? args[0] : null);
+                var savePath = ConfigUtils.GetSectionValue("DbBackup:SavePath");
+                StartBackup(connectionString, savePath);
+            }
+            catch (Exception ex)
+            {
+                LogService.Error(ex);
+            }
         }
 
         static string GetConnectionString(string connectionString, string dbName = null)
@@ -41,7 +50,15 @@ namespace MySqlBackupApp
 
             foreach (var name in names)
             {
-                ExportSingleTable(mb, name, dirPath);
+                try
+                {
+                    ExportSingleTable(mb, name, dirPath);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Warn($"Export table {name} failed.");
+                    LogService.Error(ex);
+                }
             }
 
             conn.Close();
@@ -59,12 +76,12 @@ namespace MySqlBackupApp
 
         static void ExportSingleTable(MySqlBackup mb, string tableName, string dirPath)
         {
-            Console.WriteLine($"Exporting table {tableName}...");
+            LogService.Info($"Exporting table {tableName}...");
             var dic = new Dictionary<string, string>();
             dic[tableName] = $"SELECT * FROM `{tableName}`";
             mb.ExportInfo.TablesToBeExportedDic = dic;
             mb.ExportToFile(Path.Combine(dirPath, tableName + ".sql"));
-            Console.WriteLine($"Table {tableName} exported.");
+            LogService.Info($"Table {tableName} exported.");
         }
     }
 }
